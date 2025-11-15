@@ -1,46 +1,117 @@
 openapi: 3.0.3
 info:
-  title: Easyapp API
+  title: Simple Group Chat API
   version: 1.0.0
-  description: API documentation for easyapp
+servers:
+  - url: /
 paths:
-  /api/hello/:
-    get:
-      operationId: api_hello_retrieve
-      description: Get a hello world message
-      tags:
-      - api
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+  /api/members/heartbeat/:
+    post:
+      summary: Create/update anonymous member heartbeat and get online count
+      tags: [members]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client_id:
+                  type: string
+                  description: Client identifier (if absent, server generates one)
       responses:
         '200':
+          description: Heartbeat acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  client_id:
+                    type: string
+                  display_name:
+                    type: string
+                  online_count:
+                    type: integer
+  /api/members/online_count/:
+    get:
+      summary: Get current online members count
+      tags: [members]
+      responses:
+        '200':
+          description: Online count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  online_count:
+                    type: integer
+  /api/messages/:
+    get:
+      summary: Get chat messages (polling)
+      tags: [messages]
+      parameters:
+        - in: query
+          name: after_id
+          schema:
+            type: integer
+          required: false
+          description: Return messages with id greater than this value. If omitted, returns the last 50 messages.
+      responses:
+        '200':
+          description: Messages list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+    post:
+      summary: Post a new message
+      tags: [messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_id, content]
+              properties:
+                client_id:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Message'
-          description: ''
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
 components:
   schemas:
     Message:
       type: object
       properties:
-        message:
+        id:
+          type: integer
+        author_name:
           type: string
-          maxLength: 200
-        timestamp:
+        content:
+          type: string
+        created_at:
           type: string
           format: date-time
-          readOnly: true
-      required:
-      - message
-      - timestamp
-  securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: sessionid
